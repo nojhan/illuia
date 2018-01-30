@@ -1,3 +1,4 @@
+import subprocess
 from random import seed
 import numpy as np
 from mpl_toolkits.mplot3d import *
@@ -10,20 +11,25 @@ from scipy.optimize import curve_fit
 # General parameters
 ########################################################################
 
+outfile = "test"
+tmpfile = outfile+"_{0:03d}"
+
 # xmin = -5.12
 # xmax =  5.12
 xmin = -3
 xmax =  5
+zmin = 0
+zmax = 150
 hres = 50
 lres = 15
 cnb = 20
 samp_big_n = 100
 gap = 50
-ceil = 150
+ceil = zmax
 view_alt = 32
 view_angle = 105
-#nb_frames = 100
-nb_frames = 10
+nb_frames = 100
+#nb_frames = 10
 
 print(nb_frames,"frames")
 
@@ -33,7 +39,6 @@ def init():
     ########################################################################
     # Plot initialization
     ########################################################################
-
 
     fig = plt.figure(facecolor='black')
     ax = fig.gca(projection='3d', axisbg="black")
@@ -49,6 +54,12 @@ def init():
     ax.w_xaxis._axinfo.update({'grid' : {'color': (1,1,1, 0.2)}})
     ax.w_yaxis._axinfo.update({'grid' : {'color': (1,1,1, 0.2)}})
     ax.w_zaxis._axinfo.update({'grid' : {'color': (1,1,1, 0.2)}})
+
+    # Transparent background:
+    #fig.patch.set_alpha(0.)
+    #ax.xaxis.set_visible(False)
+    #ax.yaxis.set_visible(False)
+    #ax.set_frame_on(False)
 
     plt.hold(True)
 
@@ -162,6 +173,7 @@ def first_init():
     lg0 = range(0,int(np.ceil(np.max(grid_big_gaus))) +gap,int(np.ceil((np.max(grid_big_gaus) +gap)/cnb)))
     ax.contour(*grid_big, grid_big_gaus +gap, colors="#ffcc00",levels=lg0)
 
+    ax.set_zlim([zmin,zmax])
 
 def second_init():
 
@@ -184,6 +196,7 @@ def second_init():
     lg1 = range(0,int(np.ceil(np.max(grid_big_gaus_zoom))) +gap,int(np.ceil((np.max(grid_big_gaus_zoom) +gap)/cnb)))
     ax.contour(*grid_big, grid_big_gaus_zoom +gap, colors="#ff5500",levels=lg1)
 
+    ax.set_zlim([zmin,zmax])
 
 
 def sample_down(points,x,z,i,istart,iend):
@@ -192,9 +205,10 @@ def sample_down(points,x,z,i,istart,iend):
     x,y = x
     for j,p in enumerate(points):
         p.set_data(x[j], y[j])
-        zr = ceil - (z[j]+gap)
-        zi = 1 - n/nmax
-        zj = z[j] + gap + zi * zr
+        z_end = z[j]+gap
+        z_dist = ceil - z_end # Distance to ceil
+        z_perc = 1 - n/nmax # Remaining percentage of frames
+        zj = z_end + z_perc * z_dist
         p.set_3d_properties(zj)
 
     return points
@@ -246,16 +260,35 @@ def second_animation(i):
 # Save as mp4. This requires mplayer or ffmpeg to be installed
 #anim.save('illuia.mp4', fps=15, extra_args=['-vcodec', 'libx264'])
 
+#fig,ax = init()
+#first_anim = animation.FuncAnimation(fig, first_animation, init_func=first_init, frames=nb_frames, interval=30)#, blit=True)
+#first_anim.save('illuia_0.gif',writer='imagemagick',fps=20);
+#plt.show()
+#
+#plt.clf()
+#
+#fig,ax = init()
+#second_anim = animation.FuncAnimation(fig, second_animation, init_func=second_init, frames=nb_frames, interval=30)#, blit=True)
+#second_anim.save('illuia_1.gif',writer='imagemagick',fps=20);
+#plt.show()
+
+
 fig,ax = init()
-first_anim = animation.FuncAnimation(fig, first_animation, init_func=first_init, frames=nb_frames, interval=30)#, blit=True)
-first_anim.save('illuia_0.gif',writer='imagemagick',fps=20);
-plt.show()
+for i in range(nb_frames//2):
+    first_init()
+    first_animation(i)
+    fig.savefig(tmpfile.format(i)+'.png'.format(i))#, transparent = True)
+    ax.cla()
+    ax.clear()
 
-plt.clf()
+for i in range(nb_frames//2, nb_frames):
+    second_init()
+    second_animation(i)
+    fig.savefig(tmpfile.format(i)+'.png'.format(i))#, transparent = True)
+    ax.cla()
+    ax.clear()
 
-fig,ax = init()
-second_anim = animation.FuncAnimation(fig, second_animation, init_func=second_init, frames=nb_frames, interval=30)#, blit=True)
-second_anim.save('illuia_1.gif',writer='imagemagick',fps=20);
-plt.show()
-
+args = ["/usr/bin/convert", "-delay", "10", "-loop" , "0", "-dispose", "Background", outfile+"*.png", outfile+".gif"]
+print(" ".join(args))
+#subprocess.call(args, shell=True)
 
