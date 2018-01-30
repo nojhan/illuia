@@ -27,29 +27,32 @@ nb_frames = 10
 
 print(nb_frames,"frames")
 
-
-########################################################################
-# Plot initialization
-########################################################################
-
 np.random.seed(0)
 
-fig = plt.figure(facecolor='black')
-ax = fig.gca(projection='3d', axisbg="black")
-ax.view_init(view_alt, view_angle)
-# ax.axis('off')
+def init():
+    ########################################################################
+    # Plot initialization
+    ########################################################################
 
-# Black grid background
-ax.w_xaxis.set_pane_color((0,0,0))
-ax.w_yaxis.set_pane_color((0,0,0))
-ax.w_zaxis.set_pane_color((0,0,0))
 
-# Transparent axis grid lines
-ax.w_xaxis._axinfo.update({'grid' : {'color': (1,1,1, 0.2)}})
-ax.w_yaxis._axinfo.update({'grid' : {'color': (1,1,1, 0.2)}})
-ax.w_zaxis._axinfo.update({'grid' : {'color': (1,1,1, 0.2)}})
+    fig = plt.figure(facecolor='black')
+    ax = fig.gca(projection='3d', axisbg="black")
+    ax.view_init(view_alt, view_angle)
+    # ax.axis('off')
 
-plt.hold(True)
+    # Black grid background
+    ax.w_xaxis.set_pane_color((0,0,0))
+    ax.w_yaxis.set_pane_color((0,0,0))
+    ax.w_zaxis.set_pane_color((0,0,0))
+
+    # Transparent axis grid lines
+    ax.w_xaxis._axinfo.update({'grid' : {'color': (1,1,1, 0.2)}})
+    ax.w_yaxis._axinfo.update({'grid' : {'color': (1,1,1, 0.2)}})
+    ax.w_zaxis._axinfo.update({'grid' : {'color': (1,1,1, 0.2)}})
+
+    plt.hold(True)
+
+    return fig,ax
 
 
 ########################################################################
@@ -138,7 +141,8 @@ common_props = {"markeredgecolor":"none", "alpha":0.7}
 first_sample = None
 second_sample = None
 
-def init():
+def first_init():
+
     # Grid Rastrigin surface
     ax.plot_surface(*grid_big, grid_big_rast, alpha=0.2, color="magenta");
 
@@ -158,8 +162,28 @@ def init():
     lg0 = range(0,int(np.ceil(np.max(grid_big_gaus))) +gap,int(np.ceil((np.max(grid_big_gaus) +gap)/cnb)))
     ax.contour(*grid_big, grid_big_gaus +gap, colors="#ffcc00",levels=lg0)
 
+
+def second_init():
+
+    # Grid Rastrigin surface
+    ax.plot_surface(*grid_big, grid_big_rast, alpha=0.2, color="magenta");
+
+    # Ground contour
+    ax.contour(*grid_low, grid_low_rast, offset=-1, colors="green")
+
+    # Optimum star
+    ax.scatter([0], [0], [gap], c="red", s=200, edgecolors="yellow", marker='*')
+
+    # Ground contour around optimum
+    ax.contour(*grid_big, grid_big_sphr, offset=-1, colors="red", levels=np.arange(0,1,0.2))
+
+    # Model 3D contour
+    #ls = range(0,int(np.ceil(np.max(grid_big_sphr))) +gap,int(np.ceil((np.max(grid_big_sphr) +gap)/cnb)))
+    #ax.contour(*grid_big, grid_big_sphr +gap, colors="#ffcc00",levels=ls)
+
     lg1 = range(0,int(np.ceil(np.max(grid_big_gaus_zoom))) +gap,int(np.ceil((np.max(grid_big_gaus_zoom) +gap)/cnb)))
     ax.contour(*grid_big, grid_big_gaus_zoom +gap, colors="#ff5500",levels=lg1)
+
 
 
 def sample_down(points,x,z,i,istart,iend):
@@ -186,21 +210,13 @@ def second_sample_down(artists, i, istart, iend):
 
 
 # animation function.  This will be called sequentially with the frame number
-def animate(i):
+def first_animation(i):
     global first_sample, second_sample
 
     print("{}/{}".format(i,nb_frames), flush=True)
 
-    if i <= nb_frames//2:
-        if first_sample == None:
-            first_sample = sum([ax.plot([], [], [], 'o', c="white", **common_props)
-                for k in range(samp_big_n)], [])
-        artists = first_sample_down(first_sample, i, 0, nb_frames//2)
-    else:
-        if second_sample == None:
-            second_sample = sum([ax.plot([], [], [], 'o', c="#8888ff" , **common_props)
-                for k in range(samp_big_n)], [])
-        artists = second_sample_down(second_sample, i, nb_frames//2, nb_frames)
+    first_sample = sum([ax.plot([], [], [], 'o', c="white", **common_props) for k in range(samp_big_n)], [])
+    artists = first_sample_down(first_sample, i, 0, nb_frames//2)
 
     # Rotate the view point around
     #ax.view_init(view_alt, view_angle + np.degrees(i*(2*np.pi/nb_frames)))
@@ -208,14 +224,38 @@ def animate(i):
 
     return artists
 
+
+# animation function.  This will be called sequentially with the frame number
+def second_animation(i):
+    global first_sample, second_sample
+
+    print("{}/{}".format(i,nb_frames), flush=True)
+
+    second_sample = sum([ax.plot([], [], [], 'o', c="#8888ff" , **common_props) for k in range(samp_big_n)], [])
+    artists = second_sample_down(second_sample, i, nb_frames//2, nb_frames)
+
+    # Rotate the view point around
+    #ax.view_init(view_alt, view_angle + np.degrees(i*(2*np.pi/nb_frames)))
+    fig.canvas.draw()
+
+    return artists
+
+
 # instantiate the animator.
-anim = animation.FuncAnimation(fig, animate, init_func=init, frames=nb_frames, interval=30)#, blit=True)
 
 # Save as mp4. This requires mplayer or ffmpeg to be installed
 #anim.save('illuia.mp4', fps=15, extra_args=['-vcodec', 'libx264'])
 
-anim.save('illuia.gif',writer='imagemagick',fps=20);
-#init()
-
+fig,ax = init()
+first_anim = animation.FuncAnimation(fig, first_animation, init_func=first_init, frames=nb_frames, interval=30)#, blit=True)
+first_anim.save('illuia_0.gif',writer='imagemagick',fps=20);
 plt.show()
+
+plt.clf()
+
+fig,ax = init()
+second_anim = animation.FuncAnimation(fig, second_animation, init_func=second_init, frames=nb_frames, interval=30)#, blit=True)
+second_anim.save('illuia_1.gif',writer='imagemagick',fps=20);
+plt.show()
+
 
